@@ -34,12 +34,14 @@ void open_file() {
 
 }
 
+
+
 void read_file() {
 	FILE* fp;
 	fopen_s(&fp,"result.txt", "w");
 	char plaintext[_BLOCKSIZE_];
 	float *Temp_point, * W_CS, * W_CSS, * H_S, *H_SS, **W_HS, * guesses_key;
-	
+	float W_CS1,  W_CSS1,  H_S1,  H_SS1, W_HS1;
 	
 	Temp_point = (float*)malloc(sizeof(float) * PI);
 	W_CS= (float*)malloc(sizeof(float) * PI);				//E[Y]
@@ -47,37 +49,111 @@ void read_file() {
 	H_S = (int*)malloc(sizeof(int) * _GUESS_KEY_NUM);	//E[X]
 	H_SS = (int*)malloc(sizeof(int) * _GUESS_KEY_NUM);	//E[X^2]
 	W_HS = (float**)malloc(sizeof(float*) * _GUESS_KEY_NUM);
+	
 	guesses_key = (float*)malloc(sizeof(int) * (_GUESS_KEY_NUM + 1));
 	for (int i = 0; i < _GUESS_KEY_NUM; i++) {
 		W_HS[i] = (float*)malloc(sizeof(float) * PI);
+		
 	}
+
 	
-	int best_key[16] = { 0, };//¿¹ÃøÅ° ÀúÀåÀ» À§ÇØ ¼±¾ð
+	int best_key[16] = { 0, };//ì˜ˆì¸¡í‚¤ ì €ìž¥ì„ ìœ„í•´ ì„ ì–¸
 	float F_TEMP;
 	for (int round = 0; round < 16; round++) {
+		
 		for (int i = 0; i < PI; i++) {
 			Temp_point[i] = 0;
 			W_CS[i] = 0; //E[Y]
 			W_CSS[i] = 0; //E[Y^2]
+			
+			
 		}
 		for (int i = 0; i < _GUESS_KEY_NUM; i++) {
 			H_S[i] =  0; //E[X]
 			H_SS[i] =  0; //E[X^2]
-			for (int j = 0; j < PI; j++) {
-				W_HS[i][j] = 0; //E[XY]
-			}
+			for (int j = 0; j < PI; j++)
+				W_HS[i][j] = 0;
+		
+		
 		
 		}
+
+		/*/AES-ALGIN
+		float F_TEMP;
+		H_S1 = 0;
+		H_SS1 = 0;
+		_fseeki64(fpt, 16 + (_START_POINT_ - 1) * 16, SEEK_SET);
+		for (int pi = 0; pi < PI; pi++) {
+
+
+			fread(&F_TEMP, sizeof(float), 1, fpt);
+
+			Temp_point[pi] = F_TEMP;
+
+			H_S1 += Temp_point[pi];
+			H_SS1 += Temp_point[pi] * Temp_point[pi];
+		}
+
+		int max_LR[500];
+		max_LR[0] = 0;
+		for (int tn = 1; tn < _TRACE_NUM_; tn++) {
+			//íŒŒì¼ ë¶ˆëŸ¬ì˜¤ê³  ìƒê´€ê³„ìˆ˜ E[X], E[Y] ë“± ê³„ì‚°
+			float max=0;
+			int max_left;
+			if (round == 0) {
+				for (int left = 0; left < 200; left++) {
+
+					W_CS1 = 0;				//E[Y]
+					W_CSS1 = 0;				//E[Y^2]
+					W_HS1 = 0;
+					_fseeki64(fpt, 16 + (_END_POINT_ * tn + _START_POINT_ - 100 + left) * 4, SEEK_SET);
+					for (int pi = 0; pi < PI; pi++) {
+
+						fread(&F_TEMP, sizeof(float), 1, fpt);
+						W_HS1 += F_TEMP * Temp_point[pi]; //E[X][Y]
+
+
+						W_CS1 += F_TEMP;
+						W_CSS1 += F_TEMP * F_TEMP;
+					}
+
+					float Correlation = 0;
+					float Correlation_L = (PI)*W_HS1 - H_S1 * W_CS1; //ë¶„ìž ìƒê´€ê³„ìˆ˜ ê³„ì‚°
+					//ë¶„ëª¨ ìƒê´€ê³„ìˆ˜ ê³„ì‚°
+					float Correlation_R = ((PI)*H_SS1 - (H_S1 * H_S1)) * ((PI)*W_CSS1 - (W_CS1 * W_CS1));
+
+
+					if (Correlation_R <= (float)0) {//ë¶„ëª¨ê°€ 0ì´ê±°ë‚˜ ìŒìˆ˜ì¼ê²½ìš° 0ìœ¼ë¡œ ì €ìž¥
+						Correlation = 0;
+					}
+					else {
+						Correlation = Correlation_L / sqrt(Correlation_R);
+						Correlation = fabs(Correlation);
+					}
+					if (max < Correlation) {//1000ë²ˆ ëŒë©´ì„œ ìƒê´€ê³„ìˆ˜ê°€ ì œì¼ í° ê°’ì„ maxì— ì €ìž¥
+						max = Correlation;
+						max_left = left;
+
+					}
+
+				}
+				max_LR[tn] = max_left;
+			}
+		}
+
+		//END
+		*/
+		for (int i = 0; i < PI; i++) 
+			Temp_point[i] = 0;
 		_fseeki64(fpt, 16 + (_END_POINT_  + _START_POINT_ - 1) * 16, SEEK_SET);
 		float pot;
 		fread(&pot, sizeof(float), 1, fpt);
-		//¸®½ºÆ®¿¡ ÀúÀåÇÏ´Â ÇÔ¼ö
+		//ë¦¬ìŠ¤íŠ¸ì— ì €ìž¥í•˜ëŠ” í•¨ìˆ˜
 		for (int tn = 0; tn < _TRACE_NUM_; tn++) {
 
-			//ÆÄÀÏ ºÒ·¯¿À°í »ó°ü°è¼ö E[X], E[Y] µî °è»ê
+			//íŒŒì¼ ë¶ˆëŸ¬ì˜¤ê³  ìƒê´€ê³„ìˆ˜ E[X], E[Y] ë“± ê³„ì‚°
 			
-			float F_TEMP;
-			_fseeki64(fpt, 16 + (_END_POINT_ * tn + _START_POINT_ - 1) * 16, SEEK_SET);
+			_fseeki64(fpt, 16 + (_END_POINT_ * tn + _START_POINT_ - 1)*4, SEEK_SET);
 			for (int pi = 0; pi < PI; pi++) {
 				
 				fread(&F_TEMP, sizeof(float), 1, fpt);
@@ -102,7 +178,7 @@ void read_file() {
 			
 			for (int guess_key = 0; guess_key < _GUESS_KEY_NUM; guess_key++) {
 				int key = Sbox[(plaintext[round] & 0xff) ^ guess_key];
-				//haming weight °è»ê
+				//haming weight ê³„ì‚°
 				int key_HW = (key & 0x01) + ((key >> 1) & 0x01) + ((key >> 2) & 0x01) + ((key >> 3) & 0x01) + ((key >> 4) & 0x01) + ((key >> 5) & 0x01) + ((key >> 6) & 0x01) + ((key >> 7) & 0x01);
 
 
@@ -121,11 +197,11 @@ void read_file() {
 			float max = 0;
 			for (int pi = 0; pi < PI; pi++) {
 				float Correlation;
-				float Correlation_L = _TRACE_NUM_ * W_HS[guess_key][pi] - H_S[guess_key] * W_CS[pi]; //ºÐÀÚ »ó°ü°è¼ö °è»ê
-				//ºÐ¸ð »ó°ü°è¼ö °è»ê
+				float Correlation_L = _TRACE_NUM_ * W_HS[guess_key][pi] - H_S[guess_key] * W_CS[pi]; //ë¶„ìž ìƒê´€ê³„ìˆ˜ ê³„ì‚°
+				//ë¶„ëª¨ ìƒê´€ê³„ìˆ˜ ê³„ì‚°
 				float Correlation_R = (_TRACE_NUM_ * H_SS[guess_key] - (H_S[guess_key] * H_S[guess_key])) * (_TRACE_NUM_ * W_CSS[pi] - (W_CS[pi] * W_CS[pi]));
 
-				if (Correlation_R <= (float)0) {//ºÐ¸ð°¡ 0ÀÌ°Å³ª À½¼öÀÏ°æ¿ì 0À¸·Î ÀúÀå
+				if (Correlation_R <= (float)0) {//ë¶„ëª¨ê°€ 0ì´ê±°ë‚˜ ìŒìˆ˜ì¼ê²½ìš° 0ìœ¼ë¡œ ì €ìž¥
 					Correlation = 0;
 				}
 				else {
@@ -133,16 +209,17 @@ void read_file() {
 					Correlation = fabs(Correlation);
 				}
 
-				if (max < Correlation) {//1000¹ø µ¹¸é¼­ »ó°ü°è¼ö°¡ Á¦ÀÏ Å« °ªÀ» max¿¡ ÀúÀå
+				if (max < Correlation) {//1000ë²ˆ ëŒë©´ì„œ ìƒê´€ê³„ìˆ˜ê°€ ì œì¼ í° ê°’ì„ maxì— ì €ìž¥
 					max = Correlation;
 				}
+				
 
 			}
-			guesses_key[guess_key] = max; //guesses_key¿¡ max¸¦ ÀúÀåÇÏ¿© ³ªÁß¿¡ Á¦ÀÏ Å« Å°¸¦ ÈÄº¸Å° ¼±Á¤
+			guesses_key[guess_key] = max; //guesses_keyì— maxë¥¼ ì €ìž¥í•˜ì—¬ ë‚˜ì¤‘ì— ì œì¼ í° í‚¤ë¥¼ í›„ë³´í‚¤ ì„ ì •
 
 		}
 
-		//ÈÄº¸Å°µé ±¸ÇÏ±â
+		//í›„ë³´í‚¤ë“¤ êµ¬í•˜ê¸°
 		double Corr[_CANDIDATE_ + 1] = { 0, };
 		int key[_CANDIDATE_ + 1] = { 0, };
 
@@ -159,7 +236,7 @@ void read_file() {
 
 		}
 
-		//ÈÄº¸Å°µé Ãâ·Â
+		//í›„ë³´í‚¤ë“¤ ì¶œë ¥
 		printf("%d-th key\n", round + 1);
 		fprintf(fp, "%d-th key\n", round + 1);
 
@@ -169,10 +246,10 @@ void read_file() {
 			printf("\n");
 			fprintf(fp, "\n");
 		}
-		//»ó°ü°è¼ö°¡ Á¦ÀÏ Å« Å°¸¦ ¿¹ÃøÅ°¿¡ ÀúÀå
+		//ìƒê´€ê³„ìˆ˜ê°€ ì œì¼ í° í‚¤ë¥¼ ì˜ˆì¸¡í‚¤ì— ì €ìž¥
 		best_key[round] = key[0];
 	}
-	//¿¹Ãø Å° Ãâ·Â
+	//ì˜ˆì¸¡ í‚¤ ì¶œë ¥
 	for (int i = 0; i < 16; i++) {
 		printf("%x ", best_key[i]);
 		fprintf(fp, "%x ", best_key[i]);
@@ -187,7 +264,7 @@ void read_file() {
 	}
 	free(W_HS);
 	
-	fclose(fp); //ÆÄÀÏ Æ÷ÀÎÅÍ ´Ý±â
+	fclose(fp); //íŒŒì¼ í¬ì¸í„° ë‹«ê¸°
 
 }
 
